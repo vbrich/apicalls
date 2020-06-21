@@ -68,48 +68,6 @@ app.listen(process.env.PORT || 3000, function() {
 app.get("/", function(req, res) {
   res.sendFile('public/index.html'); // no need to specify dir off root
 });
-app.post("/getdocs", function(req, res) {
-  let receivedData = JSON.parse(req.body.payload); 
-  getDocs(receivedData).then(
-    function(result) { res.send(result); },
-    function(error) { console.log(error); }
-  );
-});
-async function getDocs(receivedData) {
-  // 1 - CALL TDT 
-  let base64data = base64encode(JSON.stringify(receivedData)); 
-  tdtbody.partnerData = base64data;
-  let tdtResponse = await axios.post(tdturl, tdtbody, { headers: tdtheaders});
-  let buff = Buffer.from(tdtResponse.data.txl, 'base64');
-  let txl = buff.toString('ascii');
-  // console.log("1 - TXL = " + txl);
-
-  // 2 - CALL RUNTIME PAYMENT CALC
-  let base64payload = base64encode(txl); 
-  rtbody.transactionData = base64payload;
-  let rtResponse = await axios.post(rturl, rtbody, { headers: rtheaders});
-  let sessionId = rtResponse.data.session.id;
-  // console.log("2 - SessionId = " + sessionId);
-
-  // 3 - CALL SESSION TO GET FULL TXL
-  sessbody.session.id = sessionId;
-  let sessResponse = await axios.post(sessurl, sessbody, { headers: rtheaders});
-  let fulltxl = sessResponse.data.transactionData;
-  // let fulltxldecoded = base64decode(fulltxl);
-  // console.log("3 - FULL TXL = " + fulltxl);
-
-  // 4 - CALL DCL EXECUTE JOB TICKET
-  dclbody.jobTicket.DataValuesList[0].content = fulltxl;
-  let dclResponse = await axios.post(dclurl, dclbody, { headers: rtheaders});
-  let encodedPdf = dclResponse.data.Result.RenderedFiles[0].Content;
-  // console.log("4 - ENCODED PDF = " + encodedPdf);
-
-  return('<html><object style="width: 100%; height: 100%;" type="application/pdf" data="data:application/pdf;base64,' + encodedPdf + '"' + '></object></html>');
-}
-
-
-
-
 
 // Individual Path for TDT
 app.get("/tdt", function(req, res) {
